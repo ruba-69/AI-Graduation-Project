@@ -1,0 +1,336 @@
+\documentclass[conference]{IEEEtran}
+\IEEEoverridecommandlockouts
+\usepackage{cite}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{algorithmic}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{textcomp}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{tabularx}
+\usepackage{makecell}
+\usepackage{placeins}
+\usepackage{capt-of}
+\usepackage{dblfloatfix}
+\usepackage{cuted}
+\usepackage{ragged2e}
+\newcolumntype{Y}{>{\RaggedRight\arraybackslash}X}
+\usepackage{float}
+\usepackage{placeins}
+\usepackage{longtable}
+\usepackage[none]{hyphenat}
+\usepackage{capt-of}
+\usepackage{cuted}
+\usepackage[colorlinks=true,linkcolor=magenta,citecolor=magenta,urlcolor=magenta]{hyperref}
+\usepackage{microtype}
+\usepackage{needspace}
+\usepackage{flushend}
+% Author-Year + IEEE numeric citation
+\newcommand{\aycite}[3]{#1~(#2)~\cite{#3}}
+
+\begin{document}
+\raggedbottom
+\sloppy
+
+\begin{titlepage}
+\thispagestyle{empty}
+\centering
+
+\vspace*{0.3cm}
+\includegraphics[width=0.4\linewidth]{just_logo.JPG}
+
+\vspace{0.8cm}
+{\Huge \textbf{Automated Code Review and Optimization Using\\
+Large Language Models}}\\[1.2cm]
+
+{\large Final Project Report Submitted to\\
+The Department of Computer Science\\
+Faculty of Computer and Information Technology\\
+Jordan University of Science and Technology\\[0.6cm]
+In Partial Fulfillment of the Requirements for the Degree of\\
+Bachelors of Science in Computer Science\\}
+
+\vspace{0.8cm}
+{\Large \textbf{Prepared by:}}\\[0.4cm]
+{\Large Ruba AL Harahshah [158415]\\
+Huda Shqerat [163547]\\
+Hala ALshouha [147651]\\
+Sara Jaradat [165199]}
+
+\vspace{0.9cm}
+{\Large \textbf{Supervisor:}}\\[0.2cm]
+{\Large Yaser Jararweh\\}
+
+\vfill
+{\large January 2026}
+
+\end{titlepage}
+
+\newpage
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=1\textwidth]{arabic_tanazol.JPG}
+    \label{fig:tanazol}
+\end{figure}
+
+\title{Automated Code Review and Optimization Using Large Language Models}
+
+\author{
+\IEEEauthorblockN{
+\footnotesize
+Ruba AL Harahshah\IEEEauthorrefmark{1},
+Huda Shqerat\IEEEauthorrefmark{1},
+Hala ALshouha\IEEEauthorrefmark{1}, 
+Sara Jaradat\IEEEauthorrefmark{1},
+Yaser Jararweh\IEEEauthorrefmark{1}\\
+}
+\IEEEauthorblockA{
+\footnotesize
+
+\IEEEauthorrefmark{1}Computer Science Dept., Jordan University of Science and Technology, Irbid, Jordan \\
+\{rwalharahshah22,heshqerat22,haalshouha23,szjaradat22\}@cit.just.edu.jo, yijararweh@just.edu.jo\\
+
+}
+}
+
+\maketitle
+
+\begin{abstract}
+As code generation advances over time, Large Language Models (LLMs) have emerged as a key driver for how software is developed and deployed, yet real-world reliability should be approached with a focus on more than just passing tests. Python from AI can look right but hide a multitude of problems around maintainability, bad algorithmic choices, and security vulnerabilities. The majority of existing evaluation approaches are still fractured, evaluating either single tools, or very specific heuristics, making it inherently impossible to assess overall production readiness in a consistent manner. We bring this gap to close with an evidence driven interpretable auditing framework for AI generated Python code. Our pipeline integrates rule based static analysis for quality and security with complexity and performance, with learning based estimation of time and space complexity as well as execution based profiling when possible. Instead of using an LLM to rewrite code, we use StarCoder2 in a constrained role to synthesize tool outputs so that feedback is structured, traceable, context aware, and a prioritized to do list. We evaluate the framework on human written and AI code in terms of quality, efficiency, and security. The work lays out more concrete principles for the routine evaluation and safe incorporation of AI-generated software into human engineering practice.
+\end{abstract}
+\begin{IEEEkeywords}
+Large Language Models, Automated Code Review, Software Quality Assessment, AI-Generated Code, Static Analysis, Code Optimization, Software Security, Algorithmic Complexity
+\end{IEEEkeywords}
+
+\section{Goals and Objectives}
+This study tries to observe Python code written with artificial intelligence from various angles and not just whether or not the code functions properly. In addition to checking functional correctness, analysis is done on quality of code, computational efficiency, and security. The study follows a code-level evaluation strategy which aims to generate clear and reliable results while identifying the limitations and potential issues of conventional code assessment techniques.
+
+To achieve this goal, the following specific objectives have been established:
+\begin{itemize}
+\item Objective 1: Code Quality Analysis. Examine non-functional aspects of AI-generated Python code, focusing on common coding problems (code smells), ease of maintenance (structural maintainability), and adherence to Python style guidelines (PEP 8), aiming to reduce future technical issues.
+\item Objective 2: Computational Efficiency Evaluation. Assess the performance of AI-generated code in terms of execution time and resource usage, using learning-based approaches to provide a clear understanding of the computational overhead.
+\item Objective 3: Detection of Security Issues. Identify potential security vulnerabilities and unsafe coding patterns that may be missed by traditional tests, ensuring more secure and reliable code.
+\item Objective 4: Interpretability and Feedback Generation. Provide clear and useful diagnostic feedback to help developers understand the results of the assessment.
+\end{itemize}
+
+
+
+\section{INTRODUCTION}
+The rapid growth of Large Language Models (LLMs) has fundamentally changed the nature of software development, where you can automate the construction of practical code snippets and even entire programs. This evolution towards AI-based software development environments helped to realize visible improvements in developer productivity and reduce time to completion of projects. While these strides provide clear advantages, the growing dependence on AI-generated code presents new challenges for software quality assurance. Today, although the skill of LLMs in programming computers to satisfy the functional requirements continues to get better, an increasing amount of evidence implies that simple operational correctness does not suffice to ensure production readiness. As a result, a better understanding of the possible risks of using AI-generated code that is crucial for real systems in the real world. Many of the challenges involved with AI-generated code come from the systemic presence of non-functional defects. Numerous studies demonstrate quantitatively that code generated by state-of-the-art LLMs frequently shows a variety of software defects, including code smells, maintainability issues, and serious security risks, even when such software programs have successfully passed unit testing. \aycite{Chen et al.}{2021}{Chen2021EvaluatingLarge} This disconnect between functional performance of an application and the quality of its non-functional characteristics shows the need for a distinct and strict auditing strategy for AI-generated code. Second, even though automated code review tools currently exist and are important for promoting coding standards, they are often inaccurate, providing irrelevant or low-quality feedback that can cause developer fatigue and reduced trust in these tools. Now, only a limited number of current comprehensive automated code review solutions incorporate evaluation of algorithmic efficiency, an important factor of software quality that usually needs more advanced, learning-informed approximation methods.
+
+\section{PROBLEM STATEMENT}
+As Large Language Models for automatic code generation spread across different industries and demonstrate strong performance, new problems arise in terms of software quality, particularly with respect to non-functional aspects such as maintainability, security, and algorithmic complexity. Although a Large Language Model is able to produce software that actually works, evidence indicates that in many cases where automatic code generation is utilized in software development, the resulting code contains latent defects related to maintainability, security, and complexity, that is, non-functional requirements, even when such code passes unit testing according to traditional standards. \aycite{Chen et al.}{2021}{Chen2021EvaluatingLarge} Consequently, methods most commonly used to judge software quality within the traditional software development life cycle show obvious limitations when applied in this context. Software quality assessment has traditionally been performed separately. On one hand, conventional code analyzers, like static analysis and linting tools, are excellent for identifying syntactic errors and established fault patterns. In later stages, traditional approaches often depend on the judgment of code reviewers or quality assurance teams to analyze analyzer outputs and determine the effect any detected issues have on overall code quality. For instance, machine learning models can do well in predicting algorithmic efficiency but remain insufficiently integrated under a single methodology for evaluating software quality as a whole, that is, producing an overall quality score. \aycite{Lu et al.}{2022}{Lu2022CodeXGLUEMachine} At the moment, current AI-backed code review tools do not allow for an adequate methodological approach to guarantee homogeneous, full, and consistent evaluation when artificial intelligence is integrated with human code review. As a result, unproductive, inconsistent, and unreliable review behaviors may remain, as presented in previous studies. \aycite{Siddiq}{2022}{Siddiq2022EmpiricalStudy} Currently, there is no one-size-fits-all, high-precision, integrative auditing system for reviewing AI-generated code across its many non-functional aspects while giving diagnostic feedback in a flexible, well-articulated structured way. To address this gap, there is a need for an integrated evaluation framework to aggregate multiple analytical signals to form a consistent and transparent assessment while still being understandable, concise, and practical for automated evaluation systems.
+
+\section{PROPOSED SOLUTION}
+The aim of this project is to develop an AI-based application that aids the decision-making process for auditors by providing a formalized, structured, multidimensional approach to analyzing the quality of code produced by Large Language Models (LLMs). The proposed application will have a hybrid architecture containing a rule-based static code analysis method alongside a learning-based approach for estimating algorithmic complexity, while using an LLM as an interpretation and explanation mechanism. Instead of providing a list of alternative implementations of the generated code (i.e., through automated refactoring), the AI-supported auditing application will evaluate, diagnose, and quantify the quality of the code and make evidence-based recommendations for possible areas of improvement. The AI-based auditing application will be able to objectively measure the quality of code by means of a scoring mechanism and deliver readable and interpretable feedback within the context of the application. The application will avoid making unsupported claims about automatic transformation of code. The proposed solution integrates a variety of analytical paradigms into one analytical pipeline to address the limitations of current auditing tools and provide an overview of the quality of LLM-generated code.
+
+
+
+\section{LITERATURE REVIEW}
+We have recent advancements in large language models (LLMs) greatly enhanced the adoption of code generation via AI tools. But this rapid integration provokes serious questions in terms of the quality, efficiency, and security of the produced code, this has motivated various research projects to analyze and assess AI generated programs. This section reviews the background literature under four major dimensions.
+
+
+\subsection{Code Quality and Structural Integrity}
+Analysis on structural quality and maintainability in AI several recent studies have drawn attention to the code-generate question of generative output. Functional correctness is often obtained to a degree. consistently point to deep discrepancies in code organization and adherence to industry standards. For example, \aycite{Chen et al.}{2021}{Chen2021EvaluatingLarge} shows that AI created programs often lack modularity. Compared with human-written systems this increases the number of layers and complexity. code. Extending this work, \aycite{Lu et al.}{2022}{Lu2022CodeXGLUEMachine} present CodeXGLUE as a benchmark suite for code comprehension and generation jobs, allowing for a more consistent and reproducible assessment of AI-generated code beyond functional correctness. Furthermore, \aycite{Siddiq}{2022}{Siddiq2022EmpiricalStudy} explores the technical debt brought about by AI assistance development tools, which they find that without automated quality controls, the code that emerges becomes harder to implement, refactor and maintain. As a series, these studies \aycite{Chen et al.}{2021}{Chen2021EvaluatingLarge}, \aycite{Lu et al.}{2022}{Lu2022CodeXGLUEMachine}, and \aycite{Siddiq}{2022}{Siddiq2022EmpiricalStudy} emphasize the need for solid code quality integration metrics in automated evaluation framework.
+
+\subsection{Computational Efficiency and Resource Optimization}
+Computational performance is another important aspect dimension of evaluating AI generated code. Research presented in \aycite{Wang}{2023}{Wang2023ExecutionbasedEvaluation} points out that often AI devised implementations are plagued with redundancy of calculation and low effective control structures, causing unnecessary execution overhead. Similarly, \aycite{Liu}{2024}{Liu2024AreWeThere} comparative study is conducted with AI driven system and human authored code, indicating that AI models, in fact, often do not select optimal data structures, leading to more memory consumption. This observation is also supported by \aycite{Gupta and Sharma}{2024}{Gupta2024AlgorithmicEfficiency}, which shows that AI code snippets have poor scalability and can only exist on a small dataset size. Findings such as those of \aycite{Wang}{2023}{Wang2023ExecutionbasedEvaluation}, \aycite{Liu}{2024}{Liu2024AreWeThere}, and \aycite{Gupta and Sharma}{2024}{Gupta2024AlgorithmicEfficiency} highlight the need of incorporating execution time analysis and memory profiling as one of these fundamental pillars of all-encompassing code analysis tools.
+
+\subsection{Security Reliability and Vulnerability Assessment}
+The other big question is security, beyond quality and performance issues. The implications of AI generated code has become a crucial concern. Unlike human developers, AI models often employ pattern replication, which can unintentionally introduce vulnerabilities. In \aycite{Perry et al.}{2023}{Perry2023DoUsersWrite} frequent security flaws in the code generated by AI, such as improper validation of input and unsafe use of function, are highlighted by the authors. We see also \aycite{Pearce et al.}{2022}{Pearce2022AsleepKeyboard}, corroborating it, that shows AI models are susceptible to error code open to attacks like SQL injection. Furthermore, \aycite{Sandoval et al.}{2024}{Sandoval2024LostTranslation} is looking into the persistence of such vulnerabilities over generations and concludes automated, security aware analysis is essential to reduce risks ahead of deployment. These studies \aycite{Perry et al.}{2023}{Perry2023DoUsersWrite}, \aycite{Pearce et al.}{2022}{Pearce2022AsleepKeyboard}, and \aycite{Sandoval et al.}{2024}{Sandoval2024LostTranslation} together confirm the importance of automatic security scanning and AI, which is the need of implementing automated security scanning to automatically scan for AI generating code evaluation pipelines. This means developing code evaluation pipelines that are generated code evaluation pipelines.
+
+
+\subsection{Advanced Evaluation Methodologies and Fine Tuned Models}
+Recent studies more and more are moving towards more advanced, model centric methods for automatic code evaluation. In \aycite{Cassano}{2024}{Cassano2024MultiObjective}, the authors show that by fine-tuning language models on domain specific dataset, the reliability is greatly enhanced and consistency of automated assessments compared with general purpose prompt based methods. Extending this, \aycite{Hu and Li}{2025}{Hu2025InterpretabilityAutomated} investigate multi objective fine tuning strategies that allow a single model to measure several dimensions e.g. quality, efficacy, and security at the same time. Additionally, \aycite{Li}{2025}{Li2025StableEvaluation} in the study, the importance of interpretability in automated evaluation processes systems, indicating that fine-tuned models give a meaningful explanation along with quantitative scores. These advancements \aycite{Cassano}{2024}{Cassano2024MultiObjective}, \aycite{Hu and Li}{2025}{Hu2025InterpretabilityAutomated}, and \aycite{Li}{2025}{Li2025StableEvaluation} directly motivate the methodological decisions adopted in this work.Altogether, existing studies are useful contribution in evaluating AI written code, they mostly concentrate on independent issues such as correctness, quality, efficiency or security. On the other hand, in contrast, this research offers a coherent and methodological framework which provides all in a coherent and systematizing framework. assesses code quality, computational efficiency, and security. Utilizing fine-tuned evaluation models outlined in literature, the resulting approach overcomes some of the limitations of prior work in the literature and provides a comprehensive and accessible reading code.
+
+\vspace*{\fill}
+
+\begin{strip}
+\vspace{3cm}
+
+\centering
+\scriptsize
+\setlength{\tabcolsep}{4pt}
+\renewcommand{\arraystretch}{1.15}
+\captionof{table}{Summary of related work on AI-generated code evaluation.}
+\vspace{8pt}
+\label{tab:related_work_1}
+
+\begin{tabular}{p{0.06\textwidth} p{0.22\textwidth} p{0.14\textwidth} p{0.30\textwidth} p{0.24\textwidth}}
+\hline
+\textbf{Ref.} & \textbf{Focus / Method} & \textbf{Dataset} & \textbf{Strengths} & \textbf{Limitations} \\
+\hline
+{[1]} & Quantitative quality + security analysis & AI-generated code samples & Connects generation to measurable risks & Not a unified multi-signal pipeline \\
+{[4]} & Evaluating LLMs trained on code & Code tasks / benchmarks & Strong evaluation framing beyond correctness & Not focused on auditing outputs \\
+{[5]} & CodexGLUE benchmark dataset & Multiple code tasks & Standardizes evaluation across tasks & Not an auditing method by itself \\
+{[6]} & Code smells in generated code & Generated code corpora & Maintainability/tech-debt signals & Not focused on security/efficiency \\
+{[7]} & Execution-based evaluation & Executable program tests & Beyond match-based metrics & Mainly evaluation, not diagnosis \\
+{[8]} & Performance + resource efficiency assessment & Program datasets & Runtime/memory efficiency focus & Limited on maintainability/security \\
+{[9]}  & Time/space complexity in Python code synthesis & Python synthesis tasks & Directly targets algorithmic efficiency & Not integrated with security/quality \\
+{[10]} & Insecure code with AI assistants & User studies / code outputs & Shows security regression risk & Security-focused \\
+{[11]} & Security of GitHub Copilot suggestions & Copilot contributions & Concrete vulnerability evidence & Not multi-dimensional \\
+{[12]} & Vulnerabilities in AI-generated snippets & Snippet datasets & Systematic vulnerability analysis & Not about maintainability/efficiency integration \\
+{[13]} & Multi-objective fine-tuning for evaluation & Domain datasets & Supports multi-dimensional evaluation & High training cost/complexity \\
+{[14]} & Interpretability in automated assessment & Specialized datasets & Emphasizes explainable scoring & Generalization risk \\
+{[15]} & Stability: prompting vs fine-tuning & Evaluation setups & Motivates domain-specific tuning & Depends on dataset coverage \\
+\hline
+\end{tabular}
+\vspace{40pt}
+
+\vspace{30pt}
+\end{strip}
+
+\FloatBarrier
+\section{METHODOLOGY}
+In this study, we propose using the StarCoder2 large language model as the reasoning and explanation component of a hybrid code-review tool, which can be further pre-trained and then fine-tuned for our task. The model is chosen for its strong capabilities in code understanding and generation, as well as its extensive pre-training on large-scale, multilingual source-code corpora. Recent studies have reported that models pre-trained on large code corpora perform better on several downstream software-engineering tasks, including vulnerability analysis, code summarization, and automated code review. \aycite{Li et al.}{2024}{Li2024StarCoder2} Our approach relies on supervised instruction tuning, a technique shown to improve the reliability and controllability of large language models on complex reasoning tasks. \aycite{Ouyang et al.}{2022}{Ouyang2022TrainingLanguage} The overall methodology is organized into four stages, supported by the dataset construction overview in Fig.~\ref{fig:dataset} and the analysis pipeline in Fig.~\ref{fig:pipeline}:
+
+\subsection{Data Collection and Dataset Construction}
+To assess both of these, a Python code dataset has been built. Four major human-written and AI-generated code dimensions: time complexity, space complexity, code quality, and security. The dataset has been structured in a fixed directory structure to ensure different code categories to ensure consistency and traceability, as illustrated in Fig.~\ref{fig:dataset}. The dataset is built on high-quality human-written code samples sampled from popular open-source projects, representing common code smells, standard implementations, algorithms annotated with computational complexity, and code that is security-focused, meaning it includes purposely vulnerable patterns. Additionally, AI-generated Python code is built using large language models to solve the same problem types to allow meaningful comparison of human and AI-generated code. Every Python file has organized metadata describing its source, category, type of problem, complexity features, and quality and security insights. This dataset construction enables a systematic and multi-dimensional assessment consistent with the aims of this study.
+
+\begin{figure}[!t]
+\centering
+\includegraphics[width=0.80\columnwidth]{figure3.png}
+\caption{Overview of the Python code dataset construction.}
+\label{fig:dataset}
+\end{figure}
+
+\subsection{Analysis Pipeline and Evidence Extraction}
+In the analysis stage, we collect Python code from open-source projects, benchmark solutions, security datasets, and code-smell examples, and we also add some AI-generated code for comparison. For each snippet, we log what the tools report: security findings, time and space complexity estimates, and code smells. To keep the evaluation clear and explainable, we use a consistent workflow for every snippet, as shown in Fig.~\ref{fig:pipeline}. We first normalize the code, then run static security checks, and finally assess code quality and time/space complexity. When execution is feasible, we also measure performance. We then aggregate the results, prioritize the issues, and generate a structured explanation and refactoring plan. We assess security using reported vulnerability findings and their severity, code quality using code-smell and maintainability indicators, and efficiency using time/space complexity estimates as well as runtime and memory usage under controlled inputs when execution is feasible.
+
+\begin{figure}[!t]
+\centering
+\includegraphics[width=0.80\columnwidth]{FIGURE.png}
+\caption{Automated code review and optimization pipeline illustrating preprocessing, code analysis, scoring and prioritization, LLM-powered review, and final report generation.}
+\label{fig:pipeline}
+\end{figure}
+
+
+\subsection{Scoring and Prioritization}
+After evidence extraction, we score the issues and create a to-do list. Each action item corresponds to a recommendation and the recommendation is backed by either the tool output or the metric value. We rely on static tools for vulnerability detection and code-quality signals, while complexity is estimated via a dedicated component and complemented with execution-based profiling when feasible.
+
+\subsection{LLM-Guided Synthesis and Report Generation}
+In the final stage, the model synthesizes the tool outputs and explains how the reported findings relate to the code. It uses the tool reports as evidence and follows best practices to reduce hallucinations. \aycite{Bubeck et al.}{2023}{Bubeck2023SparksArtificial} For training, we package each example as an instruction-response pair. The model receives the code together with the tool outputs from static analysis and complexity estimation. The response includes an overall assessment and a practical to-do list, ordered from highest to lowest priority. We constrain the task to mitigate the irrelevant or low-precision feedback commonly observed in unconstrained LLM-based code review. \aycite{Cihan et al.}{2025}{Cihan2025AutomatedCode} Restricting the model to synthesis and explanation helps make its feedback more consistent and relevant. For inference, StarCoder2 receives the merged outputs of the analysis modules and generates a structured rationale and refactoring plan supported by the associated indicators. This rule-based and learning-based design reflects the growing shift toward neuro-symbolic methods for more robust and reliable systems. \aycite{Sabra et al.}{2025}{Sabra2025AssessingQuality} We will evaluate the proposed model on unseen Python snippets using our multi-dimensional appraisal framework, focusing on assessment correctness as well as the relevance and security awareness of the generated recommendations.
+
+\subsection{ Location and Safety Considerations}
+All code, datasets, and experimental results were stored safely and regularly backed up to avoid any loss or corruption of data. Since the project is completely software-driven, no physical hazards or safety risks were involved. The processes were carried out in an organized digital environment consistent with industry best practices for data management and computational safety.
+
+
+\section{RESULTS AND DISCUSSION}
+The balance between AI generated and human written Python code is evaluated using four facets: open source standards, code smells, algorithmic efficiency, and security. 
+
+\subsection{Overall Performance Overview}
+\label{subsec:overall_performance_overview}
+
+To provide a high-level comparison, the average quality scores for AI-generated compared to human written code between all evaluation categories are shown in Figure~\ref{fig:overall_comp}.
+
+The results reveal three primary themes.  
+\begin{enumerate}
+    \item AI code exhibits strong performance with Open Source and maintainability metrics. AI was 90.2\% compliant with Open Source and 90.0\% compliant with Code Smells, matching human code in both areas.  
+    \item A clear efficiency gap emerges due to algorithmic assessments, with human developers substantially outperforming AI (98.6\% compared to 89.2\%).  
+    \item In terms of security outcomes, both groups have comparable scores, human written code receiving 97.5\% while AI-generated code received 97.8\%.  
+\end{enumerate}
+
+Overall, this results demonstrates that, although AI performs well in generating well organized and stylistically consistent code, human expertise is still more appropriate to optimal algorithmic efficiency.
+
+
+\begin{figure}[H] \centering \includegraphics[width=0.48\textwidth]{1.jpeg} \caption{Human vs. AI code quality comparison across evaluation categories.} \label{fig:overall_comp} \end{figure} 
+
+\subsection{Structural and Complexity Analysis}
+To better understand the factors underlying these score differences, several structural and complexity-related metrics were analyzed.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.45\textwidth]{2.jpeg}
+\caption{Comparison of number of functions (num\_functions).}
+\label{fig:num_func}
+\end{figure}
+
+As shown in Figure~\ref{fig:num_func}, human-written code exhibits higher modularity, particularly in open-source projects, while AI-generated code tends to be more centralized with fewer functions.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.45\textwidth]{3.jpeg}
+\caption{Average function length across categories.}
+\label{fig:avg_len}
+\end{figure}
+
+Function length analysis in Figure~\ref{fig:avg_len} shows that AI-generated functions are generally shorter and more concise.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.45\textwidth]{4.jpeg}
+\caption{Maximum function length (max\_function\_length).}
+\label{fig:max_len}
+\end{figure}
+
+However, Figure~\ref{fig:max_len} highlights that human-written code occasionally includes very long functions that exceed recommended length limits, appearing as outliers.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.45\textwidth]{5.jpeg}
+\caption{Comparison of loops count (loops\_count).}
+\label{fig:loops}
+\end{figure}
+
+In terms of control flow (Figure~\ref{fig:loops}), human-authored code utilizes a higher number of loops in complex algorithmic tasks, reflecting more fine-grained control over iteration.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.45\textwidth]{6.jpeg}
+\caption{Occurrence of recursion (has\_recursion).}
+\label{fig:recursion}
+\end{figure}
+
+Recursion analysis Figure~\ref{fig:recursion} shows that human written solutions exhibit more consistent and deliberate use of recursive patterns, particularly in algorithmic problem solving.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.45\textwidth]{7.jpeg}
+\caption{Total lines of code comparison (total\_lines).}
+\label{fig:total_lines}
+\end{figure}
+
+Finally, Figure~\ref{fig:total_lines} indicates that human written projects are substantially larger and more variable in total lines of code, while AI-generated code remains consistently shorter and more uniform.
+
+\subsection{Reliability and Issue Detection}
+The reliability is tested by executing each program under identical conditions, and the program is considered failed in case of crash, runtime error, or abnormal termination. Automated analysis tools, by highlighting coding problems or security threats with patterns, are also employed. The details are reported by frequency and severity to show how often each group raises warnings or exhibits unstable behavior.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.45\textwidth]{8.jpeg}
+\caption{Distribution of overall code score (code\_score).}
+\label{fig:score_dist}
+\end{figure}
+
+As shown in Figure~\ref{fig:score_dist}, although human-written code has more variability in quality scores, AI-generated code maintains a consistently high level of performance. 
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.45\textwidth]{9.jpeg}
+\caption{Number of detected code issues (num\_code\_issues).}
+\label{fig:code_issues}
+\end{figure}
+
+In terms of detected issues, Figure~\ref{fig:code_issues} shows that AI-generated code has a notably low and stable number of code smells. 
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.45\textwidth]{10.jpeg}
+\caption{Distribution of security issues.}
+\label{fig:security_issues}
+\end{figure}
+
+Finally, Figure~\ref{fig:security_issues} reveals that while both groups generally produce secure code, human-written code occasionally exhibits outliers with higher numbers of security issues.
+
+\subsection{Discussion}
+The observed results support the design of the proposed evaluation framework. AI-generated code performs strongly in style and maintainability due to effective rule-based analysis, while human-written code maintains a clear advantage in algorithmic efficiency, justifying the inclusion of complexity-aware assessment. The similar security performance across both groups confirms the reliability of static vulnerability detection. Overall, the constrained use of the LLM enables consistent, evidence-based interpretation of multi-dimensional analysis results.
+
+% ===== CONCLUSION =====
+\section{CONCLUSION}
+In addition to describing this analysis, this study presents a proposed structured, multi-dimensional approach to evaluate AI-generated Python code using large language models. Rule-based static analysis, complexity and performance metrics, and LLM-guided synthesis, thus, the proposed framework is very effective in quantifying code quality, computational efficiency, and security vulnerabilities. An evaluation by AI (experimental, which compared AI in context of human-written code in multiple contexts) confirmed that for style guidelines, maintainability, and a consistent code structure AI excels, while human developers maintain performance and the level of algorithmic efficiency and nuanced control flows. Security evaluations were similarly showing comparable results, attesting that automated vulnerability detection was reliable. This suggests that comprehensive evaluation methods for the purposes of incorporating AI-generated code into real-world software engineering contexts. Incorporation of constrained LLM-guided feedback provides interpretable and actionable recommendations, connecting the difference between automated code generation and robust code quality assurance.
+
+\bibliographystyle{IEEEtran}
+\bibliography{references}
+
+\end{document}
